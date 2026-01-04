@@ -98,14 +98,17 @@ export async function chatCompletion(
 }
 
 /**
- * Translation-specific prompt
+ * Translation-specific prompt (with per-character glosses)
  */
 export const TRANSLATION_SYSTEM_PROMPT = `You are a professional translator specializing in English to Traditional Chinese (Taiwan Mandarin) translation.
 
 Respond ONLY with a JSON object in this exact format:
 {
   "chinese": "Traditional Chinese translation",
-  "pinyin": "pinyin with tone marks (e.g., nǐ hǎo)"
+  "pinyin": "pinyin with tone marks (e.g., nǐ hǎo)",
+  "characters": [
+    {"character": "字", "pinyin": "zì", "englishGloss": "character"}
+  ]
 }
 
 Rules:
@@ -113,10 +116,38 @@ Rules:
 - Use Taiwan Mandarin vocabulary and expressions
 - Include tone marks in pinyin (ā á ǎ à, ē é ě è, etc.)
 - Be natural and conversational
+- For each character in the translation, provide its pinyin and an English gloss (≤6 words)
 - Do not add explanations, just the JSON`;
 
 /**
- * Colloquial alternatives prompt
+ * Sense disambiguation prompt for ambiguous English words
+ */
+export const SENSE_DETECTION_PROMPT = `Analyze the English text and determine if any words are ambiguous (have multiple distinct meanings).
+
+If ambiguous, return a JSON object with senses. If unambiguous, return empty senses array.
+
+Format:
+{
+  "ambiguous": true or false,
+  "senses": [
+    {"id": "1", "word": "ambiguous word", "gloss": "meaning 1 (≤6 words)"},
+    {"id": "2", "word": "ambiguous word", "gloss": "meaning 2 (≤6 words)"}
+  ]
+}
+
+Examples:
+- "lead" → ambiguous: [{id: "1", word: "lead", gloss: "metal (Pb)"}, {id: "2", word: "lead", gloss: "to guide or direct"}]
+- "bank" → ambiguous: [{id: "1", word: "bank", gloss: "financial institution"}, {id: "2", word: "bank", gloss: "river edge"}]
+- "hello" → ambiguous: false, senses: []
+
+Rules:
+- Only flag genuinely ambiguous words that would translate differently
+- Maximum 4 senses per word
+- Each gloss must be ≤6 words
+- Focus on meanings that affect translation`;
+
+/**
+ * Colloquial alternatives prompt (with English gloss)
  */
 export const COLLOQUIAL_SYSTEM_PROMPT = `You are a native Mandarin speaker from Taiwan. Given a Chinese phrase, provide 3 colloquial alternatives that sound natural in everyday conversation.
 
@@ -126,6 +157,7 @@ Respond ONLY with a JSON object in this exact format:
     {
       "phrase": "colloquial phrase in Traditional Chinese",
       "pinyin": "pinyin with tone marks",
+      "englishGloss": "English meaning (≤6 words)",
       "formality": "casual",
       "context": "when to use this (brief)",
       "explanation": "why it's more natural (in Chinese)"
@@ -138,4 +170,5 @@ Rules:
 - Focus on Taiwan Mandarin expressions
 - Include exactly 3 alternatives with different formality levels (casual, polite, formal)
 - Include tone marks in pinyin (ā á ǎ à)
-- Keep explanations concise and in Chinese`;
+- Keep explanations concise and in Chinese
+- Each englishGloss must be ≤6 words`;

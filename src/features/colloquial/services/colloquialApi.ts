@@ -13,6 +13,7 @@ interface ColloquialResponse {
   alternatives: {
     phrase: string;
     pinyin: string;
+    englishGloss?: string;
     formality: "casual" | "polite" | "formal";
     context: string;
     explanation: string;
@@ -25,6 +26,7 @@ const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "origin
     {
       colloquialPhrase: "廁所在哪？",
       pinyin: "cè suǒ zài nǎ",
+      englishGloss: "Where's the toilet?",
       formality: "casual",
       context: "Friends, informal settings",
       explanation: "直接說'廁所'比較口語，省略敬語'請問'",
@@ -32,6 +34,7 @@ const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "origin
     {
       colloquialPhrase: "請問一下，廁所在哪裡？",
       pinyin: "qǐng wèn yī xià, cè suǒ zài nǎ lǐ",
+      englishGloss: "May I ask, where's the toilet?",
       formality: "polite",
       context: "Strangers, shops, restaurants",
       explanation: "加了'一下'讓語氣更自然友善",
@@ -39,6 +42,7 @@ const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "origin
     {
       colloquialPhrase: "不好意思，洗手間怎麼走？",
       pinyin: "bù hǎo yì si, xǐ shǒu jiān zěn me zǒu",
+      englishGloss: "Excuse me, how to the restroom?",
       formality: "formal",
       context: "Formal occasions, offices",
       explanation: "用'不好意思'開頭更禮貌，'怎麼走'是問路的自然說法",
@@ -48,6 +52,7 @@ const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "origin
     {
       colloquialPhrase: "謝啦",
       pinyin: "xiè la",
+      englishGloss: "Thanks!",
       formality: "casual",
       context: "Close friends, casual thanks",
       explanation: "加'啦'讓語氣更輕鬆隨意",
@@ -55,6 +60,7 @@ const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "origin
     {
       colloquialPhrase: "感謝你",
       pinyin: "gǎn xiè nǐ",
+      englishGloss: "I appreciate you",
       formality: "polite",
       context: "Sincere gratitude",
       explanation: "'感謝'比'謝謝'更正式一點",
@@ -62,6 +68,7 @@ const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "origin
     {
       colloquialPhrase: "太感謝了",
       pinyin: "tài gǎn xiè le",
+      englishGloss: "Thank you so much",
       formality: "formal",
       context: "Very grateful situations",
       explanation: "加'太...了'強調感謝程度",
@@ -71,6 +78,7 @@ const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "origin
     {
       colloquialPhrase: "最近怎樣？",
       pinyin: "zuì jìn zěn yàng",
+      englishGloss: "How's it going lately?",
       formality: "casual",
       context: "Friends, peers",
       explanation: "台灣人很少說'你好嗎'，'最近怎樣'更自然",
@@ -78,6 +86,7 @@ const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "origin
     {
       colloquialPhrase: "吃飽沒？",
       pinyin: "chī bǎo méi",
+      englishGloss: "Have you eaten?",
       formality: "casual",
       context: "Taiwanese greeting, any time",
       explanation: "傳統台灣式問候，表示關心",
@@ -85,6 +94,7 @@ const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "origin
     {
       colloquialPhrase: "還好嗎？",
       pinyin: "hái hǎo ma",
+      englishGloss: "You okay?",
       formality: "polite",
       context: "General check-in",
       explanation: "比較溫和的問候方式",
@@ -129,6 +139,7 @@ export async function getColloquialAlternatives(
           originalPhrase,
           colloquialPhrase: alt.phrase,
           pinyin: alt.pinyin,
+          englishGloss: alt.englishGloss?.split(" ").slice(0, 6).join(" "), // Enforce ≤6 words
           formality: alt.formality,
           context: alt.context,
           explanation: alt.explanation,

@@ -18,17 +18,27 @@ export interface VocabularyItem {
   lastReview: Date | null;
 }
 
+// Sense disambiguation for ambiguous words
+export interface WordSense {
+  id: string;
+  word: string;
+  gloss: string; // ≤6 words description
+}
+
 export interface TranslationResult {
   chinese: string;
   pinyin: string;
   english: string;
   characters: CharacterBreakdown[];
+  // Disambiguation
+  senses?: WordSense[];
+  selectedSense?: WordSense;
 }
 
 export interface CharacterBreakdown {
   character: string;
   pinyin: string;
-  meaning?: string;
+  englishGloss?: string; // ≤6 words per-character meaning
 }
 
 export interface ColloquialSuggestion {
@@ -39,6 +49,7 @@ export interface ColloquialSuggestion {
   formality: "casual" | "polite" | "formal";
   context: string;
   explanation: string;
+  englishGloss?: string; // English meaning of the colloquial phrase
   verified: boolean;
   upvotes: number;
 }

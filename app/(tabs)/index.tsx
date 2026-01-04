@@ -12,10 +12,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { COLORS, FONT_SIZES, SPACING, INPUT_LIMITS } from "@/constants";
-import { TranslationCard, useTranslation } from "@/features/translation";
+import { TranslationCard, useTranslation, detectSenses } from "@/features/translation";
 import { useVocabulary } from "@/features/vocabulary";
 import { ColloquialCard, getColloquialAlternatives } from "@/features/colloquial";
-import type { ColloquialSuggestion } from "@/types";
+import type { ColloquialSuggestion, WordSense } from "@/types";
 
 export default function TranslateScreen() {
   const [inputText, setInputText] = useState("");
@@ -23,6 +23,11 @@ export default function TranslateScreen() {
   const { addWord } = useVocabulary();
   const [colloquials, setColloquials] = useState<ColloquialSuggestion[]>([]);
   const [showColloquials, setShowColloquials] = useState(false);
+  
+  // Sense disambiguation state
+  const [senses, setSenses] = useState<WordSense[]>([]);
+  const [selectedSense, setSelectedSense] = useState<WordSense | undefined>();
+  const [detectingSenses, setDetectingSenses] = useState(false);
 
   // Show toast for translation errors
   useEffect(() => {
@@ -48,14 +53,56 @@ export default function TranslateScreen() {
       return;
     }
     setInputText(text);
+    // Reset senses when input changes
+    setSenses([]);
+    setSelectedSense(undefined);
+  };
+
+  // Detect senses when input is submitted (before translation)
+  const handleDetectSenses = async () => {
+    if (!inputText.trim()) return;
+    
+    setDetectingSenses(true);
+    try {
+      const detectedSenses = await detectSenses(inputText);
+      setSenses(detectedSenses);
+      
+      // If no ambiguity, translate directly
+      if (detectedSenses.length === 0) {
+        await performTranslation();
+      }
+      // Otherwise, show sense chips and wait for selection
+    } catch (err) {
+      console.warn("Sense detection failed:", err);
+      // Continue with translation on error
+      await performTranslation();
+    } finally {
+      setDetectingSenses(false);
+    }
+  };
+
+  const performTranslation = async (sense?: WordSense) => {
+    const response = await translate(inputText, sense);
+    if (response.success) {
+      setShowColloquials(false);
+      setColloquials([]);
+    }
+  };
+
+  const handleSenseSelect = async (sense: WordSense) => {
+    setSelectedSense(sense);
+    setSenses([]); // Hide chips after selection
+    await performTranslation(sense);
   };
 
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
-    const response = await translate(inputText);
-    if (response.success) {
-      setShowColloquials(false);
-      setColloquials([]);
+    // If senses are already detected, translate with selected sense (or none)
+    if (senses.length > 0 && selectedSense) {
+      await performTranslation(selectedSense);
+    } else {
+      // First, detect if there are ambiguous senses
+      await handleDetectSenses();
     }
   };
 
@@ -91,6 +138,8 @@ export default function TranslateScreen() {
     clear();
     setColloquials([]);
     setShowColloquials(false);
+    setSenses([]);
+    setSelectedSense(undefined);
   };
 
   return (
@@ -132,13 +181,36 @@ export default function TranslateScreen() {
             <TouchableOpacity
               style={[styles.translateButton, !inputText.trim() && styles.disabledButton]}
               onPress={handleTranslate}
-              disabled={!inputText.trim() || isLoading}
+              disabled={!inputText.trim() || isLoading || detectingSenses}
             >
               <Text style={styles.translateButtonText}>
-                {isLoading ? "Translating..." : "Translate to Chinese"}
+                {detectingSenses ? "Analyzing..." : isLoading ? "Translating..." : "Translate to Chinese"}
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Sense Disambiguation Chips */}
+          {senses.length > 0 && (
+            <View style={styles.senseSection}>
+              <Text style={styles.senseLabel}>
+                Which meaning of "{senses[0]?.word}" do you mean?
+              </Text>
+              <View style={styles.senseChips}>
+                {senses.map((sense) => (
+                  <TouchableOpacity
+                    key={sense.id}
+                    style={[
+                      styles.senseChip,
+                      selectedSense?.id === sense.id && styles.senseChipSelected,
+                    ]}
+                    onPress={() => handleSenseSelect(sense)}
+                  >
+                    <Text style={styles.senseChipText}>{sense.gloss}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Result Section */}
           {result && (
@@ -253,6 +325,41 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     color: COLORS.text,
     fontWeight: "600",
+  },
+  senseSection: {
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: SPACING.md,
+  },
+  senseLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.sm,
+    textAlign: "center",
+  },
+  senseChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.sm,
+    justifyContent: "center",
+  },
+  senseChip: {
+    backgroundColor: COLORS.secondary,
+    borderRadius: 20,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  senseChipSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  senseChipText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+    fontWeight: "500",
   },
   colloquialButton: {
     backgroundColor: COLORS.secondary,

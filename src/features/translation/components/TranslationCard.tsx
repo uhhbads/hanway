@@ -30,12 +30,17 @@ export function TranslationCard({ result, onSave, showSaveButton = true }: Trans
       {/* English */}
       <Text style={styles.english}>{result.english}</Text>
 
-      {/* Character breakdown */}
+      {/* Character breakdown with optional glosses */}
       <View style={styles.breakdownContainer}>
         {result.characters.map((char, index) => (
           <View key={index} style={styles.characterBox}>
             <Text style={styles.charPinyin}>{char.pinyin}</Text>
             <Text style={styles.character}>{char.character}</Text>
+            {char.englishGloss && (
+              <Text style={styles.charGloss} numberOfLines={2}>
+                {char.englishGloss}
+              </Text>
+            )}
           </View>
         ))}
       </View>
@@ -97,7 +102,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: SPACING.sm,
     alignItems: "center",
-    minWidth: 50,
+    minWidth: 60,
+    maxWidth: 80,
   },
   charPinyin: {
     fontSize: FONT_SIZES.xs,
@@ -107,6 +113,13 @@ const styles = StyleSheet.create({
   character: {
     fontSize: FONT_SIZES.xl,
     color: COLORS.text,
+  },
+  charGloss: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    marginTop: 2,
+    fontStyle: "italic",
   },
   actions: {
     flexDirection: "row",

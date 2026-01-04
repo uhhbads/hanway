@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { translateText } from "../services/translateApi";
 import { INPUT_LIMITS } from "@/constants";
-import type { TranslationResult } from "@/types";
+import type { TranslationResult, WordSense } from "@/types";
 
 export type TranslationStatus = "idle" | "loading" | "success" | "error";
 
@@ -30,7 +30,7 @@ export function useTranslation() {
     };
   }, []);
 
-  const translate = useCallback(async (text: string) => {
+  const translate = useCallback(async (text: string, selectedSense?: WordSense) => {
     const trimmed = text.trim();
     
     if (!trimmed) {
@@ -51,7 +51,7 @@ export function useTranslation() {
     setState((prev) => ({ ...prev, status: "loading", error: null }));
 
     try {
-      const translation = await translateText(trimmed);
+      const translation = await translateText(trimmed, selectedSense);
       
       // Freshness check: only apply result if this is still the latest request
       if (!isMountedRef.current || currentRequestId !== requestIdRef.current) {

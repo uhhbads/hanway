@@ -51,6 +51,9 @@ export function ColloquialCard({ suggestion, onUpvote }: ColloquialCardProps) {
           <View style={styles.phraseInfo}>
             <Text style={styles.pinyin}>{suggestion.pinyin}</Text>
             <Text style={styles.phrase}>{suggestion.colloquialPhrase}</Text>
+            {suggestion.englishGloss && (
+              <Text style={styles.englishGloss}>{suggestion.englishGloss}</Text>
+            )}
           </View>
           <TouchableOpacity onPress={handleSpeak} style={styles.speakButton}>
             <Text style={styles.speakIcon}>🔊</Text>
@@ -133,6 +136,12 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontWeight: "600",
     marginTop: 2,
+  },
+  englishGloss: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    marginTop: 4,
+    fontStyle: "italic",
   },
   speakButton: {
     padding: SPACING.sm,
