@@ -1,7 +1,15 @@
 import { COLLOQUIAL_PROMPT } from "@/constants";
 import type { ColloquialSuggestion } from "@/types";
-import { v4 as uuidv4 } from "uuid";
 import { getPinyin } from "@/features/translation/services/translateApi";
+
+// Simple UUID generator for React Native (no crypto dependency)
+function generateId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 // Mock colloquial alternatives for common phrases
 const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "originalPhrase" | "verified" | "upvotes">[]> = {
@@ -86,7 +94,7 @@ export async function getColloquialAlternatives(
   // Check mock data first
   if (MOCK_COLLOQUIALS[originalPhrase]) {
     return MOCK_COLLOQUIALS[originalPhrase].map((item) => ({
-      id: uuidv4(),
+      id: generateId(),
       originalPhrase,
       ...item,
       verified: true,
@@ -98,7 +106,7 @@ export async function getColloquialAlternatives(
   // In production, call OpenAI API here
   return [
     {
-      id: uuidv4(),
+      id: generateId(),
       originalPhrase,
       colloquialPhrase: originalPhrase,
       pinyin: getPinyin(originalPhrase),
