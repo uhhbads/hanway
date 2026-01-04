@@ -1,14 +1,22 @@
 import { COLLOQUIAL_PROMPT } from "@/constants";
 import type { ColloquialSuggestion } from "@/types";
 import { getPinyin } from "@/features/translation/services/translateApi";
+import { generateId } from "@/lib/generateId";
+import {
+  chatCompletion,
+  isOpenAIConfigured,
+  COLLOQUIAL_SYSTEM_PROMPT,
+  OpenAIError,
+} from "@/lib/openai";
 
-// Simple UUID generator for React Native (no crypto dependency)
-function generateId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+interface ColloquialResponse {
+  alternatives: {
+    phrase: string;
+    pinyin: string;
+    formality: "casual" | "polite" | "formal";
+    context: string;
+    explanation: string;
+  }[];
 }
 
 // Mock colloquial alternatives for common phrases
@@ -86,12 +94,12 @@ const MOCK_COLLOQUIALS: Record<string, Omit<ColloquialSuggestion, "id" | "origin
 
 /**
  * Get colloquial alternatives for a phrase
- * Uses mock data for MVP, can be replaced with OpenAI API
+ * Uses OpenAI GPT-4o-mini with fallback to mock data
  */
 export async function getColloquialAlternatives(
   originalPhrase: string
 ): Promise<ColloquialSuggestion[]> {
-  // Check mock data first
+  // Check mock data first (for common phrases)
   if (MOCK_COLLOQUIALS[originalPhrase]) {
     return MOCK_COLLOQUIALS[originalPhrase].map((item) => ({
       id: generateId(),
@@ -102,8 +110,39 @@ export async function getColloquialAlternatives(
     }));
   }
 
-  // Generate basic alternatives for unknown phrases
-  // In production, call OpenAI API here
+  // Try OpenAI if configured
+  if (isOpenAIConfigured()) {
+    try {
+      const response = await chatCompletion(
+        [
+          { role: "system", content: COLLOQUIAL_SYSTEM_PROMPT },
+          { role: "user", content: `Provide colloquial alternatives for: "${originalPhrase}"` },
+        ],
+        { temperature: 0.7, maxTokens: 500, responseFormat: "json_object" }
+      );
+
+      const parsed: ColloquialResponse = JSON.parse(response);
+
+      if (parsed.alternatives?.length > 0) {
+        return parsed.alternatives.map((alt) => ({
+          id: generateId(),
+          originalPhrase,
+          colloquialPhrase: alt.phrase,
+          pinyin: alt.pinyin,
+          formality: alt.formality,
+          context: alt.context,
+          explanation: alt.explanation,
+          verified: false,
+          upvotes: 0,
+        }));
+      }
+    } catch (err) {
+      // Log error but fall through to fallback
+      console.warn("OpenAI colloquial failed:", err instanceof OpenAIError ? err.message : err);
+    }
+  }
+
+  // Fallback for unknown phrases
   return [
     {
       id: generateId(),

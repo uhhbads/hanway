@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { COLORS, FONT_SIZES, SPACING } from "@/constants";
+import Toast from "react-native-toast-message";
+import { COLORS, FONT_SIZES, SPACING, INPUT_LIMITS } from "@/constants";
 import { TranslationCard, useTranslation } from "@/features/translation";
 import { useVocabulary } from "@/features/vocabulary";
 import { ColloquialCard, getColloquialAlternatives } from "@/features/colloquial";
@@ -19,25 +19,63 @@ import type { ColloquialSuggestion } from "@/types";
 
 export default function TranslateScreen() {
   const [inputText, setInputText] = useState("");
-  const { result, isLoading, translate, clear } = useTranslation();
+  const { result, isLoading, error, translate, clear } = useTranslation();
   const { addWord } = useVocabulary();
   const [colloquials, setColloquials] = useState<ColloquialSuggestion[]>([]);
   const [showColloquials, setShowColloquials] = useState(false);
 
+  // Show toast for translation errors
+  useEffect(() => {
+    if (error) {
+      Toast.show({
+        type: "error",
+        text1: "Translation Error",
+        text2: error,
+        visibilityTime: 3000,
+      });
+    }
+  }, [error]);
+
+  const handleInputChange = (text: string) => {
+    // Enforce max length with feedback
+    if (text.length > INPUT_LIMITS.maxTranslationLength) {
+      Toast.show({
+        type: "info",
+        text1: "Character Limit",
+        text2: `Maximum ${INPUT_LIMITS.maxTranslationLength} characters allowed`,
+        visibilityTime: 2000,
+      });
+      return;
+    }
+    setInputText(text);
+  };
+
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
-    await translate(inputText);
-    setShowColloquials(false);
-    setColloquials([]);
+    const response = await translate(inputText);
+    if (response.success) {
+      setShowColloquials(false);
+      setColloquials([]);
+    }
   };
 
   const handleSave = async () => {
     if (!result) return;
     try {
       await addWord(result.chinese, result.pinyin, result.english);
-      Alert.alert("Saved!", `"${result.chinese}" added to your vocabulary.`);
-    } catch (error) {
-      Alert.alert("Error", "Failed to save word. Please try again.");
+      Toast.show({
+        type: "success",
+        text1: "Saved!",
+        text2: `"${result.chinese}" added to vocabulary`,
+        visibilityTime: 2000,
+      });
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Save Failed",
+        text2: err instanceof Error ? err.message : "Please try again",
+        visibilityTime: 3000,
+      });
     }
   };
 
@@ -69,10 +107,11 @@ export default function TranslateScreen() {
               <TextInput
                 style={styles.input}
                 value={inputText}
-                onChangeText={setInputText}
+                onChangeText={handleInputChange}
                 placeholder="Enter text to translate..."
                 placeholderTextColor={COLORS.textMuted}
                 multiline
+                maxLength={INPUT_LIMITS.maxTranslationLength}
                 returnKeyType="done"
                 onSubmitEditing={handleTranslate}
               />
@@ -81,6 +120,14 @@ export default function TranslateScreen() {
                   <Text style={styles.clearIcon}>✕</Text>
                 </TouchableOpacity>
               )}
+            </View>
+            <View style={styles.inputFooter}>
+              <Text style={[
+                styles.charCount,
+                inputText.length > INPUT_LIMITS.maxTranslationLength * 0.9 && styles.charCountWarning
+              ]}>
+                {inputText.length}/{INPUT_LIMITS.maxTranslationLength}
+              </Text>
             </View>
             <TouchableOpacity
               style={[styles.translateButton, !inputText.trim() && styles.disabledButton]}
@@ -179,6 +226,18 @@ const styles = StyleSheet.create({
   clearIcon: {
     fontSize: FONT_SIZES.lg,
     color: COLORS.textMuted,
+  },
+  inputFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: SPACING.xs,
+  },
+  charCount: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+  },
+  charCountWarning: {
+    color: COLORS.warning,
   },
   translateButton: {
     backgroundColor: COLORS.primary,

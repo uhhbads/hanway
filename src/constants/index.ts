@@ -38,6 +38,15 @@ export const TTS_CONFIG = {
   rate: 0.8,
 } as const;
 
+export const INPUT_LIMITS = {
+  maxTranslationLength: 50,
+} as const;
+
+export const DB_CONFIG = {
+  initTimeoutMs: 5000,
+  maxRetries: 1,
+} as const;
+
 export const COLLOQUIAL_PROMPT = `You are a native Mandarin speaker from Taiwan. Given a phrase, provide 3 colloquial alternatives that sound natural in everyday conversation.
 
 For each alternative, respond in this exact JSON format:

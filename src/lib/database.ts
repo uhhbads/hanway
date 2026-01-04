@@ -1,8 +1,83 @@
 import * as SQLite from "expo-sqlite";
 import type { VocabularyItem, ColloquialSuggestion, PracticeSession } from "@/types";
+import { DB_CONFIG } from "@/constants";
 
 let db: SQLite.SQLiteDatabase | null = null;
 let initPromise: Promise<void> | null = null;
+let initError: Error | null = null;
+
+// Database error event listeners
+type DbErrorListener = (error: Error) => void;
+const errorListeners: Set<DbErrorListener> = new Set();
+
+export function onDatabaseError(listener: DbErrorListener): () => void {
+  errorListeners.add(listener);
+  return () => errorListeners.delete(listener);
+}
+
+function notifyError(error: Error): void {
+  errorListeners.forEach((listener) => listener(error));
+}
+
+// Timeout wrapper
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(message)), ms)
+    ),
+  ]);
+}
+
+async function initDatabaseInternal(): Promise<void> {
+  db = await SQLite.openDatabaseAsync("hanway.db");
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS vocabulary (
+      id TEXT PRIMARY KEY,
+      chinese TEXT NOT NULL,
+      pinyin TEXT NOT NULL,
+      english TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      dueDate TEXT NOT NULL,
+      stability REAL DEFAULT 0,
+      difficulty REAL DEFAULT 0,
+      elapsedDays INTEGER DEFAULT 0,
+      scheduledDays INTEGER DEFAULT 0,
+      reps INTEGER DEFAULT 0,
+      lapses INTEGER DEFAULT 0,
+      state TEXT DEFAULT 'new',
+      lastReview TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS colloquial_suggestions (
+      id TEXT PRIMARY KEY,
+      originalPhrase TEXT NOT NULL,
+      colloquialPhrase TEXT NOT NULL,
+      pinyin TEXT NOT NULL,
+      formality TEXT NOT NULL,
+      context TEXT NOT NULL,
+      explanation TEXT NOT NULL,
+      verified INTEGER DEFAULT 0,
+      upvotes INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS practice_sessions (
+      id TEXT PRIMARY KEY,
+      startedAt TEXT NOT NULL,
+      completedAt TEXT,
+      totalCards INTEGER DEFAULT 0,
+      correctCount INTEGER DEFAULT 0,
+      againCount INTEGER DEFAULT 0,
+      hardCount INTEGER DEFAULT 0,
+      goodCount INTEGER DEFAULT 0,
+      easyCount INTEGER DEFAULT 0
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_vocabulary_dueDate ON vocabulary(dueDate);
+    CREATE INDEX IF NOT EXISTS idx_vocabulary_state ON vocabulary(state);
+  `);
+}
 
 export async function initDatabase(): Promise<void> {
   // Return existing promise if initialization is in progress
@@ -11,58 +86,50 @@ export async function initDatabase(): Promise<void> {
   // Return immediately if already initialized
   if (db) return;
   
-  // Create and store the init promise to prevent race conditions
+  // If previous init failed, reset and retry
+  if (initError) {
+    initError = null;
+    initPromise = null;
+  }
+  
+  // Create and store the init promise with timeout and retry
   initPromise = (async () => {
-    db = await SQLite.openDatabaseAsync("hanway.db");
-
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS vocabulary (
-        id TEXT PRIMARY KEY,
-        chinese TEXT NOT NULL,
-        pinyin TEXT NOT NULL,
-        english TEXT NOT NULL,
-        createdAt TEXT NOT NULL,
-        dueDate TEXT NOT NULL,
-        stability REAL DEFAULT 0,
-        difficulty REAL DEFAULT 0,
-        elapsedDays INTEGER DEFAULT 0,
-        scheduledDays INTEGER DEFAULT 0,
-        reps INTEGER DEFAULT 0,
-        lapses INTEGER DEFAULT 0,
-        state TEXT DEFAULT 'new',
-        lastReview TEXT
-      );
-
-      CREATE TABLE IF NOT EXISTS colloquial_suggestions (
-        id TEXT PRIMARY KEY,
-        originalPhrase TEXT NOT NULL,
-        colloquialPhrase TEXT NOT NULL,
-        pinyin TEXT NOT NULL,
-        formality TEXT NOT NULL,
-        context TEXT NOT NULL,
-        explanation TEXT NOT NULL,
-        verified INTEGER DEFAULT 0,
-        upvotes INTEGER DEFAULT 0
-      );
-
-      CREATE TABLE IF NOT EXISTS practice_sessions (
-        id TEXT PRIMARY KEY,
-        startedAt TEXT NOT NULL,
-        completedAt TEXT,
-        totalCards INTEGER DEFAULT 0,
-        correctCount INTEGER DEFAULT 0,
-        againCount INTEGER DEFAULT 0,
-        hardCount INTEGER DEFAULT 0,
-        goodCount INTEGER DEFAULT 0,
-        easyCount INTEGER DEFAULT 0
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_vocabulary_dueDate ON vocabulary(dueDate);
-      CREATE INDEX IF NOT EXISTS idx_vocabulary_state ON vocabulary(state);
-    `);
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt <= DB_CONFIG.maxRetries; attempt++) {
+      try {
+        await withTimeout(
+          initDatabaseInternal(),
+          DB_CONFIG.initTimeoutMs,
+          `Database initialization timed out after ${DB_CONFIG.initTimeoutMs}ms`
+        );
+        return; // Success
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        console.warn(`Database init attempt ${attempt + 1} failed:`, lastError.message);
+        
+        // Reset state for retry
+        db = null;
+        
+        if (attempt < DB_CONFIG.maxRetries) {
+          // Wait briefly before retry
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+    }
+    
+    // All retries exhausted
+    initError = lastError;
+    initPromise = null; // Allow future retry attempts
+    notifyError(lastError!);
+    throw lastError;
   })();
   
   return initPromise;
+}
+
+export function getDatabaseError(): Error | null {
+  return initError;
 }
 
 // Vocabulary CRUD

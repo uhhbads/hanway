@@ -1,15 +1,26 @@
 import { pinyin } from "pinyin-pro";
 import { MOCK_TRANSLATIONS } from "@/constants";
+import {
+  chatCompletion,
+  isOpenAIConfigured,
+  TRANSLATION_SYSTEM_PROMPT,
+  OpenAIError,
+} from "@/lib/openai";
 import type { TranslationResult, CharacterBreakdown } from "@/types";
+
+interface TranslationResponse {
+  chinese: string;
+  pinyin: string;
+}
 
 /**
  * Translate English to Traditional Chinese
- * Uses mock data for MVP, can be replaced with DeepL API
+ * Uses OpenAI GPT-4o-mini with fallback to mock data
  */
 export async function translateText(englishText: string): Promise<TranslationResult> {
   const normalizedInput = englishText.toLowerCase().trim();
 
-  // Check mock translations first
+  // Check mock translations first (for common phrases)
   if (MOCK_TRANSLATIONS[normalizedInput]) {
     const { chinese, pinyin: pinyinText } = MOCK_TRANSLATIONS[normalizedInput];
     return {
@@ -20,8 +31,34 @@ export async function translateText(englishText: string): Promise<TranslationRes
     };
   }
 
-  // For demo: Return a placeholder for unknown phrases
-  // In production, call DeepL API here
+  // Try OpenAI translation if configured
+  if (isOpenAIConfigured()) {
+    try {
+      const response = await chatCompletion(
+        [
+          { role: "system", content: TRANSLATION_SYSTEM_PROMPT },
+          { role: "user", content: `Translate to Traditional Chinese: "${englishText}"` },
+        ],
+        { temperature: 0.3, maxTokens: 200, responseFormat: "json_object" }
+      );
+
+      const parsed: TranslationResponse = JSON.parse(response);
+
+      if (parsed.chinese && parsed.pinyin) {
+        return {
+          chinese: parsed.chinese,
+          pinyin: parsed.pinyin,
+          english: englishText,
+          characters: getCharacterBreakdown(parsed.chinese),
+        };
+      }
+    } catch (err) {
+      // Log error but fall through to fallback
+      console.warn("OpenAI translation failed:", err instanceof OpenAIError ? err.message : err);
+    }
+  }
+
+  // Fallback for unknown phrases when OpenAI is not available
   const mockChinese = "（尚無翻譯）";
   return {
     chinese: mockChinese,
