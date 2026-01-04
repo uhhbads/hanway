@@ -63,6 +63,8 @@ export function useVocabulary() {
       };
 
       try {
+        // Ensure database is initialized before saving
+        await initDatabase();
         await addVocabulary(newItem);
         addVocabularyItem(newItem);
         return newItem;

@@ -2,55 +2,67 @@ import * as SQLite from "expo-sqlite";
 import type { VocabularyItem, ColloquialSuggestion, PracticeSession } from "@/types";
 
 let db: SQLite.SQLiteDatabase | null = null;
+let initPromise: Promise<void> | null = null;
 
 export async function initDatabase(): Promise<void> {
-  db = await SQLite.openDatabaseAsync("hanway.db");
+  // Return existing promise if initialization is in progress
+  if (initPromise) return initPromise;
+  
+  // Return immediately if already initialized
+  if (db) return;
+  
+  // Create and store the init promise to prevent race conditions
+  initPromise = (async () => {
+    db = await SQLite.openDatabaseAsync("hanway.db");
 
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS vocabulary (
-      id TEXT PRIMARY KEY,
-      chinese TEXT NOT NULL,
-      pinyin TEXT NOT NULL,
-      english TEXT NOT NULL,
-      createdAt TEXT NOT NULL,
-      dueDate TEXT NOT NULL,
-      stability REAL DEFAULT 0,
-      difficulty REAL DEFAULT 0,
-      elapsedDays INTEGER DEFAULT 0,
-      scheduledDays INTEGER DEFAULT 0,
-      reps INTEGER DEFAULT 0,
-      lapses INTEGER DEFAULT 0,
-      state TEXT DEFAULT 'new',
-      lastReview TEXT
-    );
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS vocabulary (
+        id TEXT PRIMARY KEY,
+        chinese TEXT NOT NULL,
+        pinyin TEXT NOT NULL,
+        english TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        dueDate TEXT NOT NULL,
+        stability REAL DEFAULT 0,
+        difficulty REAL DEFAULT 0,
+        elapsedDays INTEGER DEFAULT 0,
+        scheduledDays INTEGER DEFAULT 0,
+        reps INTEGER DEFAULT 0,
+        lapses INTEGER DEFAULT 0,
+        state TEXT DEFAULT 'new',
+        lastReview TEXT
+      );
 
-    CREATE TABLE IF NOT EXISTS colloquial_suggestions (
-      id TEXT PRIMARY KEY,
-      originalPhrase TEXT NOT NULL,
-      colloquialPhrase TEXT NOT NULL,
-      pinyin TEXT NOT NULL,
-      formality TEXT NOT NULL,
-      context TEXT NOT NULL,
-      explanation TEXT NOT NULL,
-      verified INTEGER DEFAULT 0,
-      upvotes INTEGER DEFAULT 0
-    );
+      CREATE TABLE IF NOT EXISTS colloquial_suggestions (
+        id TEXT PRIMARY KEY,
+        originalPhrase TEXT NOT NULL,
+        colloquialPhrase TEXT NOT NULL,
+        pinyin TEXT NOT NULL,
+        formality TEXT NOT NULL,
+        context TEXT NOT NULL,
+        explanation TEXT NOT NULL,
+        verified INTEGER DEFAULT 0,
+        upvotes INTEGER DEFAULT 0
+      );
 
-    CREATE TABLE IF NOT EXISTS practice_sessions (
-      id TEXT PRIMARY KEY,
-      startedAt TEXT NOT NULL,
-      completedAt TEXT,
-      totalCards INTEGER DEFAULT 0,
-      correctCount INTEGER DEFAULT 0,
-      againCount INTEGER DEFAULT 0,
-      hardCount INTEGER DEFAULT 0,
-      goodCount INTEGER DEFAULT 0,
-      easyCount INTEGER DEFAULT 0
-    );
+      CREATE TABLE IF NOT EXISTS practice_sessions (
+        id TEXT PRIMARY KEY,
+        startedAt TEXT NOT NULL,
+        completedAt TEXT,
+        totalCards INTEGER DEFAULT 0,
+        correctCount INTEGER DEFAULT 0,
+        againCount INTEGER DEFAULT 0,
+        hardCount INTEGER DEFAULT 0,
+        goodCount INTEGER DEFAULT 0,
+        easyCount INTEGER DEFAULT 0
+      );
 
-    CREATE INDEX IF NOT EXISTS idx_vocabulary_dueDate ON vocabulary(dueDate);
-    CREATE INDEX IF NOT EXISTS idx_vocabulary_state ON vocabulary(state);
-  `);
+      CREATE INDEX IF NOT EXISTS idx_vocabulary_dueDate ON vocabulary(dueDate);
+      CREATE INDEX IF NOT EXISTS idx_vocabulary_state ON vocabulary(state);
+    `);
+  })();
+  
+  return initPromise;
 }
 
 // Vocabulary CRUD

@@ -22,10 +22,10 @@ export async function translateText(englishText: string): Promise<TranslationRes
 
   // For demo: Return a placeholder for unknown phrases
   // In production, call DeepL API here
-  const mockChinese = "翻譯中...";
+  const mockChinese = "（尚無翻譯）";
   return {
     chinese: mockChinese,
-    pinyin: getPinyin(mockChinese),
+    pinyin: "shàng wú fān yì",
     english: englishText,
     characters: getCharacterBreakdown(mockChinese),
   };
