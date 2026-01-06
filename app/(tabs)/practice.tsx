@@ -128,6 +128,7 @@ export default function PracticeScreen() {
         </View>
 
         <RecognitionQuiz
+          key={currentCard.id}
           item={currentCard}
           options={generateQuizOptions(currentCard.english)}
           onAnswer={handleAnswer}

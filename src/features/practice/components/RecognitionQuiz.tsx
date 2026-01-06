@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import * as Speech from "expo-speech";
 import { COLORS, FONT_SIZES, SPACING, TTS_CONFIG } from "@/constants";
 import type { VocabularyItem, Rating } from "@/types";
@@ -100,8 +100,12 @@ export function RecognitionQuiz({ item, options, onAnswer }: RecognitionQuizProp
         <Text style={styles.questionPrompt}>What does this mean?</Text>
       </View>
 
-      {/* Options */}
-      <View style={styles.optionsContainer}>
+      {/* Options - scrollable with fixed height */}
+      <ScrollView
+        style={styles.optionsScrollView}
+        contentContainerStyle={styles.optionsContainer}
+        showsVerticalScrollIndicator={true}
+      >
         {options.map((option, index) => (
           <TouchableOpacity
             key={index}
@@ -111,7 +115,7 @@ export function RecognitionQuiz({ item, options, onAnswer }: RecognitionQuizProp
             <Text style={styles.optionText}>{option}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -163,8 +167,12 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: SPACING.md,
   },
+  optionsScrollView: {
+    maxHeight: 260,
+  },
   optionsContainer: {
     gap: SPACING.sm,
+    paddingBottom: SPACING.sm,
   },
   optionButton: {
     backgroundColor: COLORS.secondary,
