@@ -1,16 +1,84 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { COLORS, FONT_SIZES, SPACING } from "@/constants";
 import { useAppStore } from "@/store/useAppStore";
 import { calculateRetention } from "@/features/practice";
+import { useAuth } from "@/features/auth/useAuth";
+import Toast from "react-native-toast-message";
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { vocabulary, stats } = useAppStore();
+  const { user, isGuest, signOut } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const retention = calculateRetention(vocabulary);
   const totalReviews = vocabulary.reduce((sum, item) => sum + item.reps, 0);
   const wordsLearned = vocabulary.filter((item) => item.state === "review").length;
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Do you want to keep your vocabulary data for next time?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Data',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsSigningOut(true);
+              await signOut(true);
+              Toast.show({
+                type: 'success',
+                text1: 'Signed Out',
+                text2: 'Your data has been deleted',
+              });
+            } catch (error: any) {
+              Toast.show({
+                type: 'error',
+                text1: 'Sign Out Failed',
+                text2: error.message || 'Could not sign out',
+              });
+            } finally {
+              setIsSigningOut(false);
+            }
+          },
+        },
+        {
+          text: 'Keep Data',
+          onPress: async () => {
+            try {
+              setIsSigningOut(true);
+              await signOut(false);
+              Toast.show({
+                type: 'success',
+                text1: 'Signed Out',
+                text2: 'Your data is preserved',
+              });
+            } catch (error: any) {
+              Toast.show({
+                type: 'error',
+                text1: 'Sign Out Failed',
+                text2: error.message || 'Could not sign out',
+              });
+            } finally {
+              setIsSigningOut(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleSignIn = () => {
+    router.push('/auth/sign-in');
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -18,10 +86,38 @@ export default function ProfileScreen() {
         {/* Profile Header */}
         <View style={styles.header}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>🎓</Text>
+            <Text style={styles.avatarText}>{isGuest ? '👤' : '🎓'}</Text>
           </View>
-          <Text style={styles.greeting}>Keep Learning!</Text>
-          <Text style={styles.subtitle}>Taiwan Mandarin Learner</Text>
+          
+          {isGuest ? (
+            <>
+              <View style={styles.guestBadge}>
+                <Text style={styles.guestBadgeText}>Guest Mode</Text>
+              </View>
+              <Text style={styles.greeting}>Welcome, Guest!</Text>
+              <Text style={styles.subtitle}>Sign in to sync your progress</Text>
+              <TouchableOpacity
+                style={styles.signInButton}
+                onPress={handleSignIn}
+              >
+                <Text style={styles.signInButtonText}>Sign In / Sign Up</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.greeting}>Welcome back!</Text>
+              <Text style={styles.subtitle}>{user?.email || 'Taiwan Mandarin Learner'}</Text>
+              <TouchableOpacity
+                style={styles.signOutButton}
+                onPress={handleSignOut}
+                disabled={isSigningOut}
+              >
+                <Text style={styles.signOutButtonText}>
+                  {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         {/* Stats Grid */}
@@ -211,5 +307,41 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     textAlign: "center",
     lineHeight: 20,
+  },
+  guestBadge: {
+    backgroundColor: COLORS.warning,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: 16,
+    marginBottom: SPACING.sm,
+  },
+  guestBadgeText: {
+    color: '#FFF',
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+  },
+  signInButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: 8,
+    marginTop: SPACING.md,
+  },
+  signInButtonText: {
+    color: '#FFF',
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+  },
+  signOutButton: {
+    backgroundColor: COLORS.error,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: 8,
+    marginTop: SPACING.md,
+  },
+  signOutButtonText: {
+    color: '#FFF',
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
   },
 });
