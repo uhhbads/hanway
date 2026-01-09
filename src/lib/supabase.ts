@@ -1,17 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
-import Constants from 'expo-constants';
+import 'react-native-url-polyfill/auto';
 
-// Supabase configuration
-const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl || '';
-const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey || '';
+// Supabase configuration from environment variables
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // Initialize Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
@@ -88,12 +86,8 @@ export async function signInWithGoogle() {
     );
 
     if (result.type === 'success') {
-      const url = result.url;
-      // Extract session from callback URL
-      const { data: sessionData, error: sessionError } =
-        await supabase.auth.getSessionFromUrl({ url });
-      if (sessionError) throw sessionError;
-      return sessionData;
+      // The session will be picked up by the auth state listener
+      return { session: await supabase.auth.getSession() };
     }
   }
 
@@ -121,12 +115,8 @@ export async function signInWithGitHub() {
     );
 
     if (result.type === 'success') {
-      const url = result.url;
-      // Extract session from callback URL
-      const { data: sessionData, error: sessionError } =
-        await supabase.auth.getSessionFromUrl({ url });
-      if (sessionError) throw sessionError;
-      return sessionData;
+      // The session will be picked up by the auth state listener
+      return { session: await supabase.auth.getSession() };
     }
   }
 
