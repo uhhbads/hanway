@@ -16,6 +16,39 @@ export interface VocabularyItem {
   lapses: number;
   state: "new" | "learning" | "review" | "relearning";
   lastReview: Date | null;
+  // Auth field
+  user_id?: string | null;
+}
+
+// Authentication Types
+export interface User {
+  id: string;
+  email: string;
+  created_at: string;
+  updated_at: string;
+  app_metadata?: {
+    provider?: string;
+    [key: string]: any;
+  };
+  user_metadata?: {
+    [key: string]: any;
+  };
+}
+
+export interface AuthSession {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  expires_at?: number;
+  token_type: string;
+  user: User;
+}
+
+export interface AuthState {
+  user: User | null;
+  session: AuthSession | null;
+  loading: boolean;
+  isGuest: boolean;
 }
 
 // Sense disambiguation for ambiguous words

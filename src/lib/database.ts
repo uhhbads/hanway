@@ -47,7 +47,8 @@ async function initDatabaseInternal(): Promise<void> {
       reps INTEGER DEFAULT 0,
       lapses INTEGER DEFAULT 0,
       state TEXT DEFAULT 'new',
-      lastReview TEXT
+      lastReview TEXT,
+      user_id TEXT
     );
 
     CREATE TABLE IF NOT EXISTS colloquial_suggestions (
@@ -76,7 +77,28 @@ async function initDatabaseInternal(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_vocabulary_dueDate ON vocabulary(dueDate);
     CREATE INDEX IF NOT EXISTS idx_vocabulary_state ON vocabulary(state);
+    CREATE INDEX IF NOT EXISTS idx_vocabulary_user_id ON vocabulary(user_id);
   `);
+  
+  // Run migration to add user_id column if it doesn't exist
+  await migrateDatabase();
+}
+
+async function migrateDatabase(): Promise<void> {
+  if (!db) return;
+  
+  // Check if user_id column exists
+  const tableInfo = await db.getAllAsync<{ name: string }>(
+    `PRAGMA table_info(vocabulary)`
+  );
+  
+  const hasUserId = tableInfo.some(col => col.name === 'user_id');
+  
+  if (!hasUserId) {
+    console.log('Running migration: Adding user_id column to vocabulary table');
+    await db.execAsync(`ALTER TABLE vocabulary ADD COLUMN user_id TEXT`);
+    await db.execAsync(`CREATE INDEX IF NOT EXISTS idx_vocabulary_user_id ON vocabulary(user_id)`);
+  }
 }
 
 export async function initDatabase(): Promise<void> {
