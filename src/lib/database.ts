@@ -32,6 +32,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 async function initDatabaseInternal(): Promise<void> {
   db = await SQLite.openDatabaseAsync("hanway.db");
 
+  // Step 1: Create tables (without user_id index - it may not exist on legacy DBs)
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS vocabulary (
       id TEXT PRIMARY KEY,
@@ -77,11 +78,15 @@ async function initDatabaseInternal(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_vocabulary_dueDate ON vocabulary(dueDate);
     CREATE INDEX IF NOT EXISTS idx_vocabulary_state ON vocabulary(state);
-    CREATE INDEX IF NOT EXISTS idx_vocabulary_user_id ON vocabulary(user_id);
   `);
   
-  // Run migration to add user_id column if it doesn't exist
+  // Step 2: Run migration BEFORE creating user_id index (adds column to legacy DBs)
   await migrateDatabase();
+  
+  // Step 3: Now safe to create index on user_id (column guaranteed to exist)
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_vocabulary_user_id ON vocabulary(user_id);
+  `);
 }
 
 async function migrateDatabase(): Promise<void> {

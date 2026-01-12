@@ -6,6 +6,7 @@ import {
   signOut as supabaseSignOut,
   getSession,
 } from '@/lib/supabase';
+import { initDatabase } from '@/lib/database';
 import type { AuthSession } from '@/types';
 import * as SQLite from 'expo-sqlite';
 
@@ -87,6 +88,8 @@ export class AuthService {
    * This assigns all vocabulary items with NULL user_id to the authenticated user
    */
   static async transferGuestData(userId: string): Promise<number> {
+    // Ensure database is initialized and migrated before querying user_id column
+    await initDatabase();
     const db = await SQLite.openDatabaseAsync('hanway.db');
     
     // Update all vocabulary items that don't have a user_id (guest items)
@@ -102,6 +105,8 @@ export class AuthService {
    * Clear user data on sign out (optional based on user preference)
    */
   static async clearUserData(userId: string): Promise<void> {
+    // Ensure database is initialized and migrated before querying user_id column
+    await initDatabase();
     const db = await SQLite.openDatabaseAsync('hanway.db');
     
     // Delete all vocabulary items belonging to this user
@@ -115,6 +120,8 @@ export class AuthService {
    * Get vocabulary count for current user/guest
    */
   static async getVocabularyCount(userId?: string): Promise<number> {
+    // Ensure database is initialized and migrated before querying user_id column
+    await initDatabase();
     const db = await SQLite.openDatabaseAsync('hanway.db');
     
     let query: string;
