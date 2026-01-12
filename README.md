@@ -28,6 +28,13 @@ A Mandarin Chinese learning app focused on **Traditional Chinese (Taiwan Mandari
 - Context-aware suggestions with usage notes
 - Formality indicators (casual, neutral, formal)
 
+### 🔐 Authentication (Jan 2026)
+- **Guest Mode**: Use app without login, no friction
+- **Email/Password**: Traditional sign up & sign in
+- **OAuth**: Google and GitHub social login
+- **Data Transfer**: Guest vocabulary auto-claimed on sign in
+- **Supabase Auth**: Secure cloud-based authentication
+
 ## 🛠 Tech Stack
 
 | Category | Technology |
@@ -41,6 +48,7 @@ A Mandarin Chinese learning app focused on **Traditional Chinese (Taiwan Mandari
 | Pinyin | pinyin-pro |
 | SRS | ts-fsrs |
 | Stroke Animation | Hanzi Writer (WebView) |
+| Auth | Supabase + expo-auth-session |
 
 ## 📁 Folder Structure
 
@@ -48,21 +56,32 @@ A Mandarin Chinese learning app focused on **Traditional Chinese (Taiwan Mandari
 hanway/
 ├── app/                    # Expo Router screens
 │   ├── _layout.tsx         # Root layout
+│   ├── auth/               # Authentication screens
+│   │   ├── _layout.tsx     # Auth stack layout
+│   │   ├── sign-in.tsx     # Sign in screen
+│   │   ├── sign-up.tsx     # Sign up screen
+│   │   └── callback.tsx    # OAuth callback handler
 │   └── (tabs)/             # Tab navigation
 │       ├── _layout.tsx     # Tab bar config
 │       ├── index.tsx       # Translate screen
 │       ├── vocabulary.tsx  # Vocabulary list
 │       ├── practice.tsx    # SRS practice
-│       └── profile.tsx     # User stats
+│       └── profile.tsx     # User stats & auth
 ├── src/
 │   ├── constants/          # Colors, spacing, config
 │   ├── features/           # Feature modules
+│   │   ├── auth/           # Authentication service & hooks
+│   │   │   ├── auth.service.ts
+│   │   │   ├── useAuth.ts
+│   │   │   └── index.ts
 │   │   ├── colloquial/     # Colloquial alternatives
 │   │   ├── hanzi/          # Stroke order animation
 │   │   ├── practice/       # SRS quiz & reviews
 │   │   ├── translation/    # Translation service
 │   │   └── vocabulary/     # Vocab management
-│   ├── lib/                # Database utilities
+│   ├── lib/                # Database & Supabase utilities
+│   │   ├── database.ts     # SQLite operations
+│   │   └── supabase.ts     # Supabase client & auth helpers
 │   ├── store/              # Zustand state
 │   └── types/              # TypeScript definitions
 ├── assets/                 # Images, fonts
@@ -106,12 +125,30 @@ npx expo start
 
 ## 🎯 Roadmap
 
-- [ ] Real translation API integration (OpenAI/DeepL)
+- [x] Real translation API integration (OpenAI)
+- [x] User authentication (Supabase)
 - [ ] Cloud sync with user accounts
 - [ ] Handwriting recognition
 - [ ] Sentence mining from content
 - [ ] HSK/TOCFL level filtering
 - [ ] Dark/Light theme toggle
+
+## 🔧 Environment Variables
+
+Create a `.env` file with:
+
+```bash
+# OpenAI (for translations & colloquial AI)
+EXPO_PUBLIC_OPENAI_API_KEY=sk-your-key
+
+# Supabase (for auth & future sync)
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# OAuth (optional, for Google/GitHub login)
+EXPO_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
+EXPO_PUBLIC_GITHUB_CLIENT_ID=your-github-client-id
+```
 
 ## 📄 License
 

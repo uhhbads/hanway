@@ -55,27 +55,24 @@ export default function SignInScreen() {
   const handleGoogleSignIn = async () => {
     try {
       setIsSubmitting(true);
-      const result = await signInWithGoogle();
+      await signInWithGoogle();
       
-      // Only navigate if we got a valid session
-      if (result) {
-        Toast.show({
-          type: 'success',
-          text1: 'Welcome!',
-          text2: 'Successfully signed in with Google',
-        });
-        
-        router.replace('/(tabs)');
-      } else {
-        // OAuth was cancelled or no session returned
-        setIsSubmitting(false);
-      }
+      // Navigation is handled by auth state change, 
+      // but show success toast if we're now authenticated
+      Toast.show({
+        type: 'success',
+        text1: 'Welcome!',
+        text2: 'Successfully signed in with Google',
+      });
+      
+      router.replace('/(tabs)');
     } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Sign In Failed',
         text2: error.message || 'Could not sign in with Google',
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -83,27 +80,24 @@ export default function SignInScreen() {
   const handleGitHubSignIn = async () => {
     try {
       setIsSubmitting(true);
-      const result = await signInWithGitHub();
+      await signInWithGitHub();
       
-      // Only navigate if we got a valid session
-      if (result) {
-        Toast.show({
-          type: 'success',
-          text1: 'Welcome!',
-          text2: 'Successfully signed in with GitHub',
-        });
-        
-        router.replace('/(tabs)');
-      } else {
-        // OAuth was cancelled or no session returned
-        setIsSubmitting(false);
-      }
+      // Navigation is handled by auth state change,
+      // but show success toast if we're now authenticated
+      Toast.show({
+        type: 'success',
+        text1: 'Welcome!',
+        text2: 'Successfully signed in with GitHub',
+      });
+      
+      router.replace('/(tabs)');
     } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Sign In Failed',
         text2: error.message || 'Could not sign in with GitHub',
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
