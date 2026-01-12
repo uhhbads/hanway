@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { supabase } from '@/lib/supabase';
 import Toast from 'react-native-toast-message';
 import { AuthService } from '@/features/auth';
@@ -19,10 +20,24 @@ export default function AuthCallback() {
 
   async function handleCallback() {
     try {
-      // Get the current session (should be set by Supabase after OAuth redirect)
-      const { data: { session }, error } = await supabase.auth.getSession();
-
-      if (error) throw error;
+      // Get the code from URL params or current URL
+      const code = params.code as string | undefined;
+      
+      let session = null;
+      
+      if (code) {
+        // Exchange the code for a session
+        const { data, error: exchangeError } = 
+          await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) throw exchangeError;
+        session = data.session;
+      } else {
+        // Fallback: try to get existing session
+        const { data: { session: existingSession }, error } = 
+          await supabase.auth.getSession();
+        if (error) throw error;
+        session = existingSession;
+      }
 
       if (session?.user) {
         // Transfer guest data to the authenticated user

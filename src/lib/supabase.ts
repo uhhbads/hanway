@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import 'react-native-url-polyfill/auto';
@@ -7,9 +8,15 @@ import 'react-native-url-polyfill/auto';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Initialize Supabase client
+// Validate env vars are present
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase environment variables not set. Auth features will not work.');
+}
+
+// Initialize Supabase client with AsyncStorage for session persistence
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
+    storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
@@ -85,9 +92,17 @@ export async function signInWithGoogle() {
       redirectUrl
     );
 
-    if (result.type === 'success') {
-      // The session will be picked up by the auth state listener
-      return { session: await supabase.auth.getSession() };
+    if (result.type === 'success' && result.url) {
+      // Extract code from the callback URL and exchange for session
+      const url = new URL(result.url);
+      const code = url.searchParams.get('code');
+      
+      if (code) {
+        const { data: sessionData, error: exchangeError } = 
+          await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) throw exchangeError;
+        return { session: sessionData.session };
+      }
     }
   }
 
@@ -114,9 +129,17 @@ export async function signInWithGitHub() {
       redirectUrl
     );
 
-    if (result.type === 'success') {
-      // The session will be picked up by the auth state listener
-      return { session: await supabase.auth.getSession() };
+    if (result.type === 'success' && result.url) {
+      // Extract code from the callback URL and exchange for session
+      const url = new URL(result.url);
+      const code = url.searchParams.get('code');
+      
+      if (code) {
+        const { data: sessionData, error: exchangeError } = 
+          await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) throw exchangeError;
+        return { session: sessionData.session };
+      }
     }
   }
 
