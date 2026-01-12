@@ -74,22 +74,27 @@ export default function SignUpScreen() {
   const handleGoogleSignUp = async () => {
     try {
       setIsSubmitting(true);
-      await signInWithGoogle();
+      const result = await signInWithGoogle();
       
-      Toast.show({
-        type: 'success',
-        text1: 'Welcome!',
-        text2: 'Successfully signed up with Google',
-      });
-      
-      router.replace('/(tabs)');
+      // Only navigate if we got a valid session
+      if (result) {
+        Toast.show({
+          type: 'success',
+          text1: 'Welcome!',
+          text2: 'Successfully signed up with Google',
+        });
+        
+        router.replace('/(tabs)');
+      } else {
+        // OAuth was cancelled or no session returned
+        setIsSubmitting(false);
+      }
     } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Sign Up Failed',
         text2: error.message || 'Could not sign up with Google',
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -97,22 +102,27 @@ export default function SignUpScreen() {
   const handleGitHubSignUp = async () => {
     try {
       setIsSubmitting(true);
-      await signInWithGitHub();
+      const result = await signInWithGitHub();
       
-      Toast.show({
-        type: 'success',
-        text1: 'Welcome!',
-        text2: 'Successfully signed up with GitHub',
-      });
-      
-      router.replace('/(tabs)');
+      // Only navigate if we got a valid session
+      if (result) {
+        Toast.show({
+          type: 'success',
+          text1: 'Welcome!',
+          text2: 'Successfully signed up with GitHub',
+        });
+        
+        router.replace('/(tabs)');
+      } else {
+        // OAuth was cancelled or no session returned
+        setIsSubmitting(false);
+      }
     } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Sign Up Failed',
         text2: error.message || 'Could not sign up with GitHub',
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
